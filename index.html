@@ -1,78 +1,178 @@
 <!doctype html>
-<html lang="us">
+<html lang="en">
 <head>
 	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 	<title>Modern FOV Calculator</title>
-	<link href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" rel="stylesheet">
+	<meta name="description" content="Field of view and triple screen angle calculator for sim racing, with a reverse mode that finds your seating distance.">
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Saira+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
 	<link href="./style.css" rel="stylesheet">
-	<script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
-	<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js" integrity="sha256-VazP97ZCwtekAsvgPBSUwPFKdrwD3unUfSGVYrahUqU=" crossorigin="anonymous"></script>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui-touch-punch/0.2.3/jquery.ui.touch-punch.min.js"></script>
-	<script src="./script.js"></script>
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
-	<div>
-		<fieldset>
-			<legend>Input</legend>
-
-			<label for="ratio">Screen Ratio</label>
-			<select name="ratio" id="ratio">
-				<option value="16_9">16:9</option>
-				<option value="16_10">16:10</option>
-				<option value="21_9">21:9</option>
-				<option value="24_10">24:10</option>
-				<option value="32_9">32:9</option>
-				<option value="32_10">32:10</option>
-				<option value="5_4">5:4</option>
-				<option value="4_3">4:3</option>
-			</select>
-
-			<label for="screensizeSlider">Screen Size (inch)</label>
-			<div id="screensizeSlider">
-				<div id="screensize-handle" class="ui-slider-handle myhandle"></div>
+<div class="app">
+	<header class="top">
+		<div class="brand">
+			<h1>FOV Calculator</h1>
+			<p>Field of view and triple screen angle for sim racing</p>
+		</div>
+		<div class="top-controls">
+			<div class="seg" role="radiogroup" aria-label="Mode">
+				<input type="radio" name="mode" id="mode-fov" value="fov" checked>
+				<label for="mode-fov">Find my FOV</label>
+				<input type="radio" name="mode" id="mode-distance" value="distance">
+				<label for="mode-distance">Find my distance</label>
 			</div>
-			<input type="hidden" id="screensize" />
+			<div class="seg seg-small" role="radiogroup" aria-label="Units">
+				<input type="radio" name="unit" id="unit-cm" value="cm" checked>
+				<label for="unit-cm">cm</label>
+				<input type="radio" name="unit" id="unit-in" value="in">
+				<label for="unit-in">in</label>
+			</div>
+		</div>
+	</header>
 
-			<label for="distanceSlider">Distance to Screen (cm/inches)</label>
-			<div style="margin: 0.5em 0;">
-				<label style="display: inline-block; margin-right: 1em; font-weight: normal;">
-					<input type="radio" name="distanceUnit" value="cm" checked> cm
+	<main class="layout">
+		<section class="panel controls" aria-label="Your setup">
+			<h2>Your setup</h2>
+
+			<div class="field">
+				<span class="field-label">Screens</span>
+				<div class="seg seg-wide" role="radiogroup" aria-label="Screens">
+					<input type="radio" name="screens" id="screens-3" value="3" checked>
+					<label for="screens-3">Triple</label>
+					<input type="radio" name="screens" id="screens-1" value="1">
+					<label for="screens-1">Single</label>
+				</div>
+			</div>
+
+			<div class="field">
+				<label class="field-label" for="ratio">Aspect ratio</label>
+				<select id="ratio">
+					<option value="16_9">16:9</option>
+					<option value="16_10">16:10</option>
+					<option value="21_9">21:9</option>
+					<option value="24_10">24:10</option>
+					<option value="32_9">32:9</option>
+					<option value="32_10">32:10</option>
+					<option value="5_4">5:4</option>
+					<option value="4_3">4:3</option>
+				</select>
+			</div>
+
+			<div class="field">
+				<div class="field-row">
+					<label class="field-label" for="size">Screen size</label>
+					<span class="num"><input type="number" id="size-num" min="10" max="100" step="0.5" aria-label="Screen size in inches"><em>in</em></span>
+				</div>
+				<input type="range" id="size" min="17" max="85" step="0.5" value="32">
+			</div>
+
+			<div class="field" id="distance-field">
+				<div class="field-row">
+					<label class="field-label" for="distance">Eye to screen</label>
+					<span class="num"><input type="number" id="distance-num" step="0.5" aria-label="Distance from eyes to screen"><em class="unit-label">cm</em></span>
+				</div>
+				<input type="range" id="distance" min="20" max="250" step="0.5" value="70">
+				<p class="hint">Measure from your eyes to the middle of the centre screen.</p>
+			</div>
+
+			<div class="field target" id="target-field" hidden>
+				<label class="field-label" for="target-game">I want this value</label>
+				<select id="target-game"></select>
+				<div class="field-row">
+					<label class="field-label" for="target">Target</label>
+					<span class="num"><input type="number" id="target-num" aria-label="Target value"><em id="target-unit">°</em></span>
+				</div>
+				<input type="range" id="target">
+				<p class="hint" id="target-hint"></p>
+			</div>
+
+			<div class="field" id="bezel-field">
+				<div class="field-row">
+					<label class="field-label" for="bezel">Bezel width</label>
+					<span class="num"><input type="number" id="bezel-num" min="0" max="100" step="1" aria-label="Bezel width in millimetres"><em>mm</em></span>
+				</div>
+				<input type="range" id="bezel" min="0" max="40" step="1" value="8">
+				<p class="hint">One edge of the panel. Two bezels meet between screens.</p>
+			</div>
+
+			<div class="field">
+				<label class="switch" for="curved">
+					<input type="checkbox" id="curved">
+					<span class="switch-track" aria-hidden="true"></span>
+					<span>Curved screens</span>
 				</label>
-				<label style="display: inline-block; font-weight: normal;">
-					<input type="radio" name="distanceUnit" value="in"> inches
-				</label>
 			</div>
-			<div id="distanceSlider">
-				<div id="distance-handle" class="ui-slider-handle myhandle"></div>
+
+			<div class="field" id="radius-field" hidden>
+				<div class="field-row">
+					<label class="field-label" for="radius">Curve radius</label>
+					<span class="num"><input type="number" id="radius-num" min="300" max="4000" step="10" aria-label="Curve radius in millimetres"><em>R</em></span>
+				</div>
+				<input type="range" id="radius" min="500" max="4000" step="100" value="1000">
+				<p class="hint">1000R means a 1000 mm radius. Smaller is more curved.</p>
 			</div>
-			<input type="hidden" id="distance" />
+		</section>
 
-			<label for="screens" style="margin-top: 2.5em;">Screens</label>
-			<select name="screens" id="screens">
-			  <option value="1">Single Screen</option>
-			  <option value="3">Triple Screens</option>
-			</select>
+		<div class="results">
+			<section class="panel headline" aria-label="Result" aria-live="polite">
+				<div class="stat" id="stat-distance">
+					<span class="stat-label">Eye to screen</span>
+					<span class="stat-value" id="out-distance">–</span>
+				</div>
+				<div class="stat">
+					<span class="stat-label">Horizontal FOV</span>
+					<span class="stat-value" id="out-hfov">–</span>
+				</div>
+				<div class="stat">
+					<span class="stat-label">Vertical FOV</span>
+					<span class="stat-value" id="out-vfov">–</span>
+				</div>
+				<div class="stat" id="stat-angle">
+					<span class="stat-label">Side screen angle</span>
+					<span class="stat-value" id="out-angle">–</span>
+				</div>
+				<p class="message" id="message" hidden></p>
+			</section>
 
-			<label for="curved">Curved screens </label>
-			<input type="checkbox" name="curved" id="curved" />
+			<section class="panel viz" aria-label="Visualization">
+				<div class="viz-head">
+					<h2>Rig from above</h2>
+					<span class="viz-note" id="viz-note"></span>
+				</div>
+				<div class="viz-top"><svg id="top-view" role="img" aria-label="Top view of the screens and your field of view"></svg></div>
+				<div class="viz-bottom">
+					<div>
+						<h3>From the side</h3>
+						<svg id="side-view" role="img" aria-label="Side view with vertical field of view"></svg>
+					</div>
+					<dl class="facts" id="facts"></dl>
+				</div>
+			</section>
 
-			<label for="radius">Radius of curve (mm)</label>
-			<div id="radiusSlider">
-				<div id="radius-handle" class="ui-slider-handle myhandle"></div>
-			</div>
-			<input type="hidden" id="radius" />
+			<section class="panel games" aria-label="Game settings">
+				<div class="games-head">
+					<h2>Game settings</h2>
+					<button type="button" class="ghost" id="copy-link">Copy link to this setup</button>
+				</div>
+				<div class="table-wrap">
+					<table>
+						<thead><tr><th scope="col">Game</th><th scope="col" class="r">Setting</th></tr></thead>
+						<tbody id="games"></tbody>
+					</table>
+				</div>
+				<p class="hint">Values in amber hit the game's own limit, so the in-game view won't match your screens exactly.</p>
+			</section>
+		</div>
+	</main>
 
-			<label for="bezelSlider">Bezel Thickness for Triple Screen (mm)</label>
-			<div id="bezelSlider">
-				<div id="bezel-handle" class="ui-slider-handle myhandle"></div>
-			</div>
-			<input type="hidden" id="bezel" />
-		</fieldset>
-		<fieldset>
-			<legend>Result</legend>
-			<div id="fov">value placeholder</div>
-		</fieldset>
-	</div>
+	<footer class="foot">
+		Based on the <a href="https://github.com/dinex86/FOV-Calculator">Modern FOV Calculator</a> by Markus Ewert and contributors (MIT licence).
+	</footer>
+</div>
+<script src="./calc.js"></script>
+<script src="./script.js"></script>
 </body>
 </html>
