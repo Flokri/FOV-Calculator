@@ -17,8 +17,8 @@
 		bezel: 8,
 		curved: false,
 		radius: 1000,
-		targetGame: gameId('Triple Screen Angle'),
-		target: 60
+		targetGame: gameId('Inner Screen Angle'),
+		target: 125
 	};
 
 	function gameId(name) {
@@ -52,13 +52,20 @@
 		return { min: min, max: max, step: step, decimals: game.group === 'hfovrad' ? 3 : Math.max(0, Math.min(game.decimals, 2)) };
 	}
 
+	var LABELS = {
+		'hFov': 'Horizontal FOV (all screens)',
+		'vFov': 'Vertical FOV',
+		'Triple Screen Angle': 'Side screen turn-in',
+		'Inner Screen Angle': 'Inner angle (middle to side)'
+	};
+
 	function fillTargetSelect() {
 		var sel = $('target-game');
-		var order = ['Triple Screen Angle', 'hFov', 'vFov'];
+		var order = ['Inner Screen Angle', 'Triple Screen Angle', 'hFov', 'vFov'];
 		var html = '<optgroup label="Angles">';
 		order.forEach(function (name) {
 			var g = FOV.GAMES[gameId(name)];
-			var label = name === 'hFov' ? 'Horizontal FOV (all screens)' : name === 'vFov' ? 'Vertical FOV' : 'Side screen angle';
+			var label = LABELS[name] || name;
 			html += '<option value="' + g.id + '">' + label + '</option>';
 		});
 		html += '</optgroup><optgroup label="Game setting">';
@@ -77,16 +84,17 @@
 			el.min = r.min; el.max = r.max; el.step = r.step;
 		});
 		$('target').value = state.target;
-		$('target-num').value = fmt(state.target, r.decimals);
+		showNum('target-num', state.target, r.decimals);
 		$('target-unit').textContent = game.unit || 'step';
 		$('target-game').value = state.targetGame;
 		var hints = {
-			tangle: 'The angle between the centre screen and each side screen.',
+			tangle: 'How far each side screen is turned in from being flat with the middle one.',
+			tangle_inner: 'The angle on your side between the middle screen and each side screen. 180° is flat.',
 			hfov: 'Horizontal field of view across all screens.',
 			vfov: 'Vertical field of view, as most sims use it.'
 		};
 		var hint = hints[game.group] || 'Enter the value you want in the game and get the distance that makes it correct.';
-		if (game.group === 'tangle' && state.screens === 1) hint = 'For a single screen this is its own horizontal FOV.';
+		if ((game.group === 'tangle' || game.group === 'tangle_inner') && state.screens === 1) hint = 'For a single screen this is its own horizontal FOV.';
 		$('target-hint').textContent = hint;
 	}
 
@@ -145,7 +153,8 @@
 		$('out-distance').innerHTML = lengthHtml(distanceCm);
 		$('out-hfov').innerHTML = degHtml(geo.totalHAngle);
 		$('out-vfov').innerHTML = degHtml(geo.vAngle);
-		$('out-angle').innerHTML = degHtml(geo.hAngle);
+		$('out-inner').innerHTML = degHtml(Math.PI - geo.hAngle);
+		$('out-angle').textContent = 'Sides turned in ' + fmt(geo.hAngle * DEG, 1) + '°';
 		$('message').hidden = !message;
 		$('message').textContent = message;
 
@@ -158,7 +167,8 @@
 	}
 
 	function renderEmpty(message) {
-		['out-distance', 'out-hfov', 'out-vfov', 'out-angle'].forEach(function (id) { $(id).textContent = '–'; });
+		['out-distance', 'out-hfov', 'out-vfov', 'out-inner'].forEach(function (id) { $(id).textContent = '–'; });
+		$('out-angle').textContent = '';
 		$('message').hidden = false;
 		$('message').textContent = message;
 		$('games').innerHTML = '';
@@ -177,7 +187,8 @@
 			if (lastGroup && v.game.group !== lastGroup) cls.push('group-start');
 			if (v.game.id === targetId) cls.push('is-target');
 			lastGroup = v.game.group;
-			var name = v.game.name === 'Triple Screen Angle' ? 'Side screen angle' : v.game.name;
+			if (v.game.group === 'tangle_inner' && state.screens === 1) return;
+			var name = v.game.group.indexOf('tangle') === 0 ? LABELS[v.game.name] : v.game.name;
 			var title = v.clamped ? ' title="Limited by the game (' + v.clamped + ')"' : '';
 			html += '<tr class="' + cls.join(' ') + '"><td>' + name + '</td><td class="v' + (v.clamped ? ' clamped' : '') + '"' + title + '>' + v.text + '</td></tr>';
 		});
@@ -292,16 +303,27 @@
 		var lab = polar(eye[0], eye[1], arcR + 14, 0);
 		svg.appendChild(el('text', { x: eye[0] - 8, y: lab[1] + 4, 'text-anchor': 'end', class: 'svg-fov-label svg-halo' }, fmt(H * DEG, 1) + '°'));
 
-		// Side screen angle at the right-hand joint.
+		// Screen angles at the joints: the inner angle on your side of both joints, and how far
+		// the side screens are turned in, drawn outside the right-hand joint.
 		if (p.screens > 1) {
-			var J = P(rotate(shape.at(w), 0));
-			var jr = 34;
-			var a0 = Math.PI / 2, a1 = Math.PI / 2 + geo.hAngle;
-			var ext = polar(J[0], J[1], jr + 12, a0);
+			var h = geo.hAngle;
+			var innerText = fmt(180 - h * DEG, 1) + '°';
+			var joints = [
+				{ at: P(shape.at(w)), a0: Math.PI / 2 + h, a1: 3 * Math.PI / 2 },
+				{ at: P(shape.at(0)), a0: Math.PI / 2, a1: 3 * Math.PI / 2 - h }
+			];
+			joints.forEach(function (j) {
+				var jr = 30;
+				svg.appendChild(el('path', { d: arcPath(j.at[0], j.at[1], jr, j.a0, j.a1), fill: 'none', stroke: 'var(--accent)', 'stroke-width': 2 }));
+				var la = polar(j.at[0], j.at[1], jr + 16, (j.a0 + j.a1) / 2);
+				svg.appendChild(el('text', { x: la[0], y: la[1] + 4, 'text-anchor': 'middle', class: 'svg-label-strong svg-halo', style: 'fill: var(--accent)' }, innerText));
+			});
+			var J = joints[0].at, tr = 26;
+			var ext = polar(J[0], J[1], tr + 12, Math.PI / 2);
 			svg.appendChild(el('line', { x1: J[0], y1: J[1], x2: ext[0], y2: ext[1], stroke: 'var(--ink-3)', 'stroke-width': 1, 'stroke-dasharray': '3 3' }));
-			svg.appendChild(el('path', { d: arcPath(J[0], J[1], jr, a0, a1), fill: 'none', stroke: 'var(--accent)', 'stroke-width': 2 }));
-			var la = polar(J[0], J[1], jr + 10, (a0 + a1) / 2);
-			svg.appendChild(el('text', { x: la[0] + 4, y: la[1] + 4, class: 'svg-label-strong svg-halo', fill: 'var(--accent)', style: 'fill: var(--accent)' }, fmt(geo.hAngle * DEG, 1) + '°'));
+			svg.appendChild(el('path', { d: arcPath(J[0], J[1], tr, Math.PI / 2, Math.PI / 2 + h), fill: 'none', stroke: 'var(--ink-3)', 'stroke-width': 1.5 }));
+			var lt = polar(J[0], J[1], tr + 8, Math.PI / 2 + h / 2);
+			svg.appendChild(el('text', { x: lt[0] + 4, y: lt[1] + 4, class: 'svg-label svg-halo' }, fmt(h * DEG, 1) + '°'));
 		}
 
 		// Head.
@@ -318,7 +340,7 @@
 		svg.appendChild(el('text', { x: bx, y: by - 9, class: 'svg-label' }, state.unit === 'cm' ? barCm + ' cm' : fmt(barCm / CM_PER_INCH, 0) + ' in'));
 
 		$('viz-note').textContent = p.screens > 1
-			? 'Side screens angled ' + fmt(geo.hAngle * DEG, 1) + '° so each one faces your eyes'
+			? 'Inner angle ' + fmt(180 - geo.hAngle * DEG, 1) + '° (sides turned in ' + fmt(geo.hAngle * DEG, 1) + '°), so each screen faces your eyes'
 			: 'Single screen, ' + fmt(geo.hAngle * DEG, 1) + '° wide';
 
 		var sx = xs.slice(2), sy = ys.slice(2);
@@ -370,7 +392,10 @@
 			[p.screens > 1 ? 'Rig width' : 'Screen width', lengthText(shape.width)],
 		];
 		if (shape.depth > 0.5) rows.push(['Rig depth', lengthText(shape.depth)]);
-		if (p.screens > 1) rows.push(['Side screen angle', fmt(geo.hAngle * DEG, 1) + '°']);
+		if (p.screens > 1) {
+			rows.push(['Inner angle, middle to side', fmt(180 - geo.hAngle * DEG, 1) + '°']);
+			rows.push(['Side screens turned in', fmt(geo.hAngle * DEG, 1) + '°']);
+		}
 		if (p.curved) rows.push(['Curve depth', lengthText(geo.sagitta)]);
 		rows.push(['FOV per screen', fmt(geo.hAngle * DEG, 1) + '°']);
 		$('facts').innerHTML = rows.map(function (r) { return '<dt>' + r[0] + '</dt><dd>' + r[1] + '</dd>'; }).join('');
@@ -378,26 +403,85 @@
 
 	// ---------- Inputs ----------
 
-	function bindPair(rangeId, numId, key, decimals, toState, fromState) {
+	// Accepts "27,5" as well as "27.5".
+	function parseNum(text) {
+		var v = parseFloat(String(text).trim().replace(',', '.'));
+		return isFinite(v) ? v : null;
+	}
+
+	/*
+	 * A text box for numbers. Clicking selects the whole value so typing replaces it, the
+	 * value is never rewritten while you type, and it is tidied up (clamped, formatted) when
+	 * you leave the box or press Enter. Arrow up/down step the value.
+	 * opts: { get(), set(v), bounds() -> {min, max, step}, decimals() }
+	 */
+	function numberBox(input, opts) {
+		var selectOnMouseUp = false;
+		input.addEventListener('focus', function () {
+			input.select();
+			selectOnMouseUp = true;
+		});
+		input.addEventListener('mouseup', function (e) {
+			// Keep the select-all from focus instead of placing the caret where the click landed.
+			if (selectOnMouseUp && input.selectionStart === input.selectionEnd) e.preventDefault(), input.select();
+			selectOnMouseUp = false;
+		});
+		input.addEventListener('input', function () {
+			var v = parseNum(input.value);
+			if (v === null) return;
+			var b = opts.bounds();
+			if (v < b.min || v > b.max) return; // wait until the value makes sense
+			opts.set(v);
+		});
+		function commit() {
+			var v = parseNum(input.value);
+			var b = opts.bounds();
+			if (v !== null) opts.set(Math.min(b.max, Math.max(b.min, v)));
+			input.value = fmt(opts.get(), opts.decimals());
+		}
+		input.addEventListener('blur', commit);
+		input.addEventListener('keydown', function (e) {
+			if (e.key === 'Enter') { commit(); input.select(); return; }
+			if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+			e.preventDefault();
+			var b = opts.bounds();
+			var cur = parseNum(input.value);
+			if (cur === null) cur = opts.get();
+			var next = cur + (e.key === 'ArrowUp' ? b.step : -b.step);
+			opts.set(Math.min(b.max, Math.max(b.min, next)));
+			input.value = fmt(opts.get(), opts.decimals());
+			input.select();
+		});
+	}
+
+	// Writes a value into a number box unless the user is typing in it.
+	function showNum(id, value, decimals) {
+		var el = $(id);
+		if (document.activeElement !== el) el.value = fmt(value, decimals);
+	}
+
+	function bindPair(rangeId, numId, key, decimals, bounds, toState, fromState) {
 		toState = toState || function (v) { return v; };
 		fromState = fromState || function (v) { return v; };
 		function sync() {
 			$(rangeId).value = fromState(state[key]);
-			$(numId).value = fmt(fromState(state[key]), decimals);
+			showNum(numId, fromState(state[key]), decimals);
 		}
 		$(rangeId).addEventListener('input', function () {
 			state[key] = toState(parseFloat(this.value));
-			$(numId).value = fmt(fromState(state[key]), decimals);
+			showNum(numId, fromState(state[key]), decimals);
 			update();
 		});
-		$(numId).addEventListener('input', function () {
-			var v = parseFloat(this.value);
-			if (!isFinite(v) || v <= 0 && key !== 'bezel') return;
-			state[key] = toState(v);
-			$(rangeId).value = fromState(state[key]);
-			update();
+		numberBox($(numId), {
+			get: function () { return fromState(state[key]); },
+			set: function (v) {
+				state[key] = toState(v);
+				$(rangeId).value = v;
+				update();
+			},
+			bounds: bounds,
+			decimals: function () { return decimals; }
 		});
-		$(numId).addEventListener('change', sync);
 		return sync;
 	}
 
@@ -420,20 +504,21 @@
 		fillTargetSelect();
 		loadHash();
 
-		syncers.push(bindPair('size', 'size-num', 'size', 1));
-		syncers.push(bindPair('distance', 'distance-num', 'distanceCm', 1, fromUnit, toUnit));
-		syncers.push(bindPair('bezel', 'bezel-num', 'bezel', 0));
-		syncers.push(bindPair('radius', 'radius-num', 'radius', 0));
+		function fixed(min, max, step) { return function () { return { min: min, max: max, step: step }; }; }
+		syncers.push(bindPair('size', 'size-num', 'size', 1, fixed(10, 100, 0.5)));
+		syncers.push(bindPair('distance', 'distance-num', 'distanceCm', 1, function () {
+			return state.unit === 'cm' ? { min: 5, max: 500, step: 0.5 } : { min: 2, max: 200, step: 0.25 };
+		}, fromUnit, toUnit));
+		syncers.push(bindPair('bezel', 'bezel-num', 'bezel', 0, fixed(0, 100, 1)));
+		syncers.push(bindPair('radius', 'radius-num', 'radius', 0, fixed(300, 4000, 50)));
 
 		$('target').addEventListener('input', function () { state.target = parseFloat(this.value); update(); });
-		$('target-num').addEventListener('input', function () {
-			var v = parseFloat(this.value);
-			if (!isFinite(v)) return;
-			state.target = v;
-			$('target').value = v;
-			update();
+		numberBox($('target-num'), {
+			get: function () { return state.target; },
+			set: function (v) { state.target = v; $('target').value = v; update(); },
+			bounds: function () { return targetRange(FOV.GAMES[state.targetGame]); },
+			decimals: function () { return targetRange(FOV.GAMES[state.targetGame]).decimals; }
 		});
-		$('target-num').addEventListener('change', function () { update(); });
 		$('target-game').addEventListener('change', function () {
 			// Start from what the current setup already gives, so the distance doesn't jump.
 			state.targetGame = parseInt(this.value, 10);
@@ -456,7 +541,8 @@
 		document.querySelectorAll('input[name="screens"]').forEach(function (r) {
 			r.addEventListener('change', function () {
 				state.screens = parseInt(this.value, 10);
-				if (state.screens === 1 && FOV.GAMES[state.targetGame].group === 'tangle') {
+				var g = FOV.GAMES[state.targetGame].group;
+				if (state.screens === 1 && (g === 'tangle' || g === 'tangle_inner')) {
 					state.targetGame = gameId('hFov');
 					state.target = currentValue(state.targetGame);
 				}
@@ -522,7 +608,7 @@
 		if (['cm', 'in'].indexOf(state.unit) === -1) state.unit = 'cm';
 		if (state.screens !== 1) state.screens = 3;
 		if (!document.querySelector('#ratio option[value="' + state.ratio + '"]')) state.ratio = '16_9';
-		if (!FOV.GAMES[state.targetGame]) state.targetGame = gameId('Triple Screen Angle');
+		if (!FOV.GAMES[state.targetGame]) state.targetGame = gameId('Inner Screen Angle');
 	}
 
 	var resizeTimer;

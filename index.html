@@ -64,7 +64,7 @@
 			<div class="field">
 				<div class="field-row">
 					<label class="field-label" for="size">Screen size</label>
-					<span class="num"><input type="number" id="size-num" min="10" max="100" step="0.5" aria-label="Screen size in inches"><em>in</em></span>
+					<span class="num"><input type="text" id="size-num" inputmode="decimal" autocomplete="off" spellcheck="false" aria-label="Screen size in inches"><em>in</em></span>
 				</div>
 				<input type="range" id="size" min="17" max="85" step="0.5" value="32">
 			</div>
@@ -72,7 +72,7 @@
 			<div class="field" id="distance-field">
 				<div class="field-row">
 					<label class="field-label" for="distance">Eye to screen</label>
-					<span class="num"><input type="number" id="distance-num" step="0.5" aria-label="Distance from eyes to screen"><em class="unit-label">cm</em></span>
+					<span class="num"><input type="text" id="distance-num" inputmode="decimal" autocomplete="off" spellcheck="false" aria-label="Distance from eyes to screen"><em class="unit-label">cm</em></span>
 				</div>
 				<input type="range" id="distance" min="20" max="250" step="0.5" value="70">
 				<p class="hint">Measure from your eyes to the middle of the centre screen.</p>
@@ -83,7 +83,7 @@
 				<select id="target-game"></select>
 				<div class="field-row">
 					<label class="field-label" for="target">Target</label>
-					<span class="num"><input type="number" id="target-num" aria-label="Target value"><em id="target-unit">°</em></span>
+					<span class="num"><input type="text" id="target-num" inputmode="decimal" autocomplete="off" spellcheck="false" aria-label="Target value"><em id="target-unit">°</em></span>
 				</div>
 				<input type="range" id="target">
 				<p class="hint" id="target-hint"></p>
@@ -92,7 +92,7 @@
 			<div class="field" id="bezel-field">
 				<div class="field-row">
 					<label class="field-label" for="bezel">Bezel width</label>
-					<span class="num"><input type="number" id="bezel-num" min="0" max="100" step="1" aria-label="Bezel width in millimetres"><em>mm</em></span>
+					<span class="num"><input type="text" id="bezel-num" inputmode="decimal" autocomplete="off" spellcheck="false" aria-label="Bezel width in millimetres"><em>mm</em></span>
 				</div>
 				<input type="range" id="bezel" min="0" max="40" step="1" value="8">
 				<p class="hint">One edge of the panel. Two bezels meet between screens.</p>
@@ -109,7 +109,7 @@
 			<div class="field" id="radius-field" hidden>
 				<div class="field-row">
 					<label class="field-label" for="radius">Curve radius</label>
-					<span class="num"><input type="number" id="radius-num" min="300" max="4000" step="10" aria-label="Curve radius in millimetres"><em>R</em></span>
+					<span class="num"><input type="text" id="radius-num" inputmode="decimal" autocomplete="off" spellcheck="false" aria-label="Curve radius in millimetres"><em>R</em></span>
 				</div>
 				<input type="range" id="radius" min="500" max="4000" step="100" value="1000">
 				<p class="hint">1000R means a 1000 mm radius. Smaller is more curved.</p>
@@ -131,8 +131,9 @@
 					<span class="stat-value" id="out-vfov">–</span>
 				</div>
 				<div class="stat" id="stat-angle">
-					<span class="stat-label">Side screen angle</span>
-					<span class="stat-value" id="out-angle">–</span>
+					<span class="stat-label">Inner angle</span>
+					<span class="stat-value" id="out-inner">–</span>
+					<span class="stat-sub" id="out-angle"></span>
 				</div>
 				<p class="message" id="message" hidden></p>
 			</section>

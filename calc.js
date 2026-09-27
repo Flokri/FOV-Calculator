@@ -44,6 +44,10 @@
 		},
 		'tangle': {
 			"Triple Screen Angle": { min: 10, max: 180, decimals: 2, factor: 1 }
+		},
+		// Not in the original: the angle on the inside between the middle and a side screen.
+		'tangle_inner': {
+			"Inner Screen Angle": { min: 0, max: 170, decimals: 2, factor: 1 }
 		}
 	};
 
@@ -120,6 +124,8 @@
 				value = DEG * triangularAngle(geo.width / p.ratioX * p.ratioY / 3 * 4, p.distanceCm); break;
 			case 'tangle':
 				value = DEG * geo.hAngle; break;
+			case 'tangle_inner':
+				value = 180 - DEG * geo.hAngle; break;
 		}
 		value *= game.factor;
 		if (game.group === 'vfovx') {
@@ -184,12 +190,13 @@
 		// A curved screen has to stay in front of the eye, or the angle wraps past 180°.
 		var lo = MIN_DISTANCE_CM, hi = MAX_DISTANCE_CM;
 		if (p.curved) lo = Math.max(lo, geometry(Object.assign({}, p, { distanceCm: hi })).sagitta + 0.5);
-		// Every value decreases as you sit further away.
-		if (target > f(lo)) return { error: 'too-wide' };
-		if (target < f(hi)) return { error: 'too-narrow' };
+		// FOV values shrink as you sit further away; the inner screen angle grows.
+		var sign = f(lo) > f(hi) ? 1 : -1;
+		if (sign * target > sign * f(lo)) return { error: 'too-wide' };
+		if (sign * target < sign * f(hi)) return { error: 'too-narrow' };
 		for (var i = 0; i < 80; i++) {
 			var mid = (lo + hi) / 2;
-			if (f(mid) > target) lo = mid; else hi = mid;
+			if (sign * f(mid) > sign * target) lo = mid; else hi = mid;
 		}
 		return { distanceCm: (lo + hi) / 2 };
 	}
