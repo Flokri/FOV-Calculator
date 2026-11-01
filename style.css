@@ -187,7 +187,7 @@ select:focus-visible, input[type="number"]:focus-visible { outline: 2px solid va
 }
 .num em { font-style: normal; color: var(--ink-3); font-size: 0.85rem; min-width: 1.4em; }
 .num input {
-	width: 5.5em;
+	width: 6.5em;
 	font: 500 0.95rem var(--font-mono);
 	text-align: right;
 	color: var(--ink);
@@ -247,8 +247,9 @@ input[type="range"] {
 	white-space: nowrap;
 }
 .stat-value small { font-size: 0.55em; color: var(--ink-3); margin-left: 2px; font-weight: 500; }
+.stat-sub { font-size: 0.8rem; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .stat.solved { background: var(--accent); }
-.stat.solved .stat-label, .stat.solved .stat-value, .stat.solved .stat-value small { color: var(--accent-ink); }
+.stat.solved .stat-label, .stat.solved .stat-value, .stat.solved .stat-value small, .stat.solved .stat-sub { color: var(--accent-ink); }
 .message {
 	grid-column: 1 / -1;
 	margin: 0;
